@@ -5,6 +5,7 @@ import (
 	"github.com/ares0516/snake/pkg/define"
 	"github.com/hajimehoshi/ebiten/v2"
 	"image/color"
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -17,6 +18,8 @@ type GreedySnake struct {
 	snakeBodyLen int                 // 蛇的长度
 	snakeBody    []*component.Square // 蛇的身体
 
+	awards []*component.Square // 奖励
+
 	mutex   sync.RWMutex
 	running bool
 }
@@ -25,7 +28,7 @@ func NewGreedySnake() *GreedySnake {
 	return &GreedySnake{
 		screenWidth:  640,
 		screenHeight: 480,
-		snakeBodyLen: 3, // 初始长度为3
+		snakeBodyLen: 10, // 初始长度为3
 	}
 }
 
@@ -80,11 +83,38 @@ func (g *GreedySnake) Draw(screen *ebiten.Image) {
 	for _, body := range g.snakeBody {
 		screen.DrawImage(body.Image, body.Opts)
 	}
+
+	// 绘制奖励
+	for _, award := range g.awards {
+		screen.DrawImage(award.Image, award.Opts)
+	}
+}
+
+func (g *GreedySnake) AwardGenerator() {
+	ticker := time.NewTicker(500 * time.Millisecond)
+	for {
+		if g.IsRunning() {
+			select {
+			case <-ticker.C:
+				if len(g.awards) > 5 {
+					g.awards = g.awards[1:5]
+				}
+				if len(g.awards) < 5 {
+					g.awards = append(g.awards, component.NewSquare(define.Yellow, 5, 5, float64(rand.Intn(300)+10), float64(rand.Intn(200)+10), 0))
+				}
+			default:
+				// do nothing
+			}
+		}
+	}
 }
 
 func (g *GreedySnake) BodyGenerator(dir define.Position) {
 	if g.IsRunning() {
 		g.snakeBody = append(g.snakeBody, component.NewSquare(define.Green, 5, 5, dir.X, dir.Y, 5))
+		if len(g.snakeBody) > g.snakeBodyLen {
+			g.snakeBody = g.snakeBody[1:]
+		}
 	}
 }
 
@@ -93,7 +123,7 @@ func (g *GreedySnake) BodyGenerator(dir define.Position) {
 //
 //	2.根据分数绘制蛇的身体
 func XUpdate(game *GreedySnake) {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(500 * time.Millisecond)
 	pos := define.Position{}
 	for {
 		if game.IsRunning() {
@@ -113,10 +143,11 @@ func main() {
 	game := NewGreedySnake()
 	game.snake = component.NewSquare(define.Green, 5, 5, 320, 240, 5)
 	// 初始化蛇的身体，优先生成尾部
-	game.snakeBody = append(game.snakeBody, component.NewSquare(define.Green, 5, 5, 305, 240, 5))
-	game.snakeBody = append(game.snakeBody, component.NewSquare(define.Green, 5, 5, 310, 240, 5))
-	game.snakeBody = append(game.snakeBody, component.NewSquare(define.Green, 5, 5, 315, 240, 5))
+	//game.snakeBody = append(game.snakeBody, component.NewSquare(define.Green, 5, 5, 305, 240, 5))
+	//game.snakeBody = append(game.snakeBody, component.NewSquare(define.Green, 5, 5, 310, 240, 5))
+	//game.snakeBody = append(game.snakeBody, component.NewSquare(define.Green, 5, 5, 315, 240, 5))
 	go XUpdate(game)
+	go game.AwardGenerator()
 	// 2. 设置游戏窗口大小
 	ebiten.SetWindowSize(game.screenWidth, game.screenHeight)
 	// 3. 设置游戏窗口标题
