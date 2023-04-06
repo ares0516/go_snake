@@ -78,3 +78,17 @@ func (s *Square) SetDirection(dir define.Direction) {
 	log.Printf("111111-----stepX[%f]stepY[%f]", s.stepX, s.stepY)
 	return
 }
+
+func (s *Square) Transparent(w, h float64) {
+	x, y := s.x+s.stepX, s.y+s.stepY // 小球下一步位置坐标
+	if x <= 0 {
+		s.x = w - s.w
+	} else if x+s.w >= w {
+		s.x = 0
+	} else if y <= 0 {
+		s.y = h - s.h
+	} else if y+s.h >= h { // 小球落地
+		s.y = 0
+	}
+	s.Opts.GeoM.Translate(s.x, s.y)
+}

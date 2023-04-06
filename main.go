@@ -57,6 +57,10 @@ func (g *GreedySnake) Update() error {
 		}
 	}
 
+	if g.IsRunning() {
+		g.snake.Transparent(float64(g.screenWidth), float64(g.screenHeight))
+	}
+
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
 		g.snake.SetDirection(define.LEFT)
 	}
@@ -123,7 +127,7 @@ func (g *GreedySnake) BodyGenerator(dir define.Position) {
 //
 //	2.根据分数绘制蛇的身体
 func XUpdate(game *GreedySnake) {
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(200 * time.Millisecond)
 	pos := define.Position{}
 	for {
 		if game.IsRunning() {
