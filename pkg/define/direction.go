@@ -5,6 +5,11 @@ type Direction struct {
 	Y float64
 }
 
+type Position struct {
+	X float64
+	Y float64
+}
+
 var (
 	UP    = Direction{0, -1}
 	DOWN  = Direction{0, 1}

@@ -56,11 +56,13 @@ func NewSquareWithImage(image *ebiten.Image, x, y, step float64) *Square {
 	}
 }
 
-func (s *Square) Move() {
+// Move 移动到新坐标并返回之前的坐标
+func (s *Square) Move() define.Position {
 	log.Printf("current squre x[%f]y[%f]  stepX[%f]stepY[%f]", s.x, s.y, s.stepX, s.stepY)
 	s.x += s.stepX
 	s.y += s.stepY
 	s.Opts.GeoM.Translate(s.stepX, s.stepY)
+	return define.Position{X: s.x, Y: s.y}
 }
 
 func (s *Square) SetDirection(dir define.Direction) {

@@ -5,7 +5,6 @@ import (
 	"github.com/ares0516/snake/pkg/define"
 	"github.com/hajimehoshi/ebiten/v2"
 	"image/color"
-	"log"
 	"sync"
 	"time"
 )
@@ -14,7 +13,9 @@ type GreedySnake struct {
 	screenWidth  int
 	screenHeight int
 
-	snake *component.Square
+	snake        *component.Square
+	snakeBodyLen int                 // 蛇的长度
+	snakeBody    []*component.Square // 蛇的身体
 
 	mutex   sync.RWMutex
 	running bool
@@ -24,6 +25,7 @@ func NewGreedySnake() *GreedySnake {
 	return &GreedySnake{
 		screenWidth:  640,
 		screenHeight: 480,
+		snakeBodyLen: 3, // 初始长度为3
 	}
 }
 
@@ -72,28 +74,36 @@ func (g *GreedySnake) Update() error {
 func (g *GreedySnake) Draw(screen *ebiten.Image) {
 	// 绘制黑色背景
 	screen.Fill(color.RGBA{0, 0, 0, 255})
-	// 绘制图像
+	// 绘制蛇的头
 	screen.DrawImage(g.snake.Image, g.snake.Opts)
+	// 绘制蛇的身体
+	for _, body := range g.snakeBody {
+		screen.DrawImage(body.Image, body.Opts)
+	}
 }
 
-func (g *GreedySnake) SnakeMove() {
-	for g.IsRunning() { // 如果游戏开始，蛇开始移动
-		log.Printf("snake move")
-		g.snake.Move()
-		time.After(1 * time.Second) // 每隔1秒移动一次
+func (g *GreedySnake) BodyGenerator(dir define.Position) {
+	if g.IsRunning() {
+		g.snakeBody = append(g.snakeBody, component.NewSquare(define.Green, 5, 5, dir.X, dir.Y, 5))
 	}
 }
 
 // XUpdate 更新游戏的逻辑,通过外部协程来更新snake的移动
-// TODO: 根据游戏等级来控制蛇的移动速度
+// TODO: 1.根据游戏等级来控制蛇的移动速度
+//
+//	2.根据分数绘制蛇的身体
 func XUpdate(game *GreedySnake) {
 	ticker := time.NewTicker(1 * time.Second)
+	pos := define.Position{}
 	for {
-		select {
-		case <-ticker.C:
-			game.snake.Move()
-		default:
-			// do nothing
+		if game.IsRunning() {
+			select {
+			case <-ticker.C:
+				pos = game.snake.Move()
+				game.BodyGenerator(pos)
+			default:
+				// do nothing
+			}
 		}
 	}
 }
@@ -102,6 +112,10 @@ func main() {
 	// 1. 初始化游戏
 	game := NewGreedySnake()
 	game.snake = component.NewSquare(define.Green, 5, 5, 320, 240, 5)
+	// 初始化蛇的身体，优先生成尾部
+	game.snakeBody = append(game.snakeBody, component.NewSquare(define.Green, 5, 5, 305, 240, 5))
+	game.snakeBody = append(game.snakeBody, component.NewSquare(define.Green, 5, 5, 310, 240, 5))
+	game.snakeBody = append(game.snakeBody, component.NewSquare(define.Green, 5, 5, 315, 240, 5))
 	go XUpdate(game)
 	// 2. 设置游戏窗口大小
 	ebiten.SetWindowSize(game.screenWidth, game.screenHeight)
