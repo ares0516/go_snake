@@ -58,7 +58,7 @@ func NewSquareWithImage(image *ebiten.Image, x, y, step float64) *Square {
 
 // Move 移动到新坐标并返回之前的坐标
 func (s *Square) Move() define.Position {
-	log.Printf("current squre x[%f]y[%f]  stepX[%f]stepY[%f]", s.x, s.y, s.stepX, s.stepY)
+	//log.Printf("current squre x[%f]y[%f]  stepX[%f]stepY[%f]", s.x, s.y, s.stepX, s.stepY)
 	s.x += s.stepX
 	s.y += s.stepY
 	s.Opts.GeoM.Translate(s.stepX, s.stepY)
@@ -66,19 +66,20 @@ func (s *Square) Move() define.Position {
 }
 
 func (s *Square) SetDirection(dir define.Direction) {
-	log.Printf("----------------------dir[%v]", dir)
+	//log.Printf("----------------------dir[%v]", dir)
 	// 1. 不需要转向的场景
 	if (s.stepX == 0 && dir.X == 0) || (s.stepY == 0 && dir.Y == 0) {
 		return
 	}
 	// 2. 需要转向的场景
-	log.Printf("000000-----stepX[%f]stepY[%f]", s.stepX, s.stepY)
+	//log.Printf("000000-----stepX[%f]stepY[%f]", s.stepX, s.stepY)
 	s.stepX = dir.X * s.step
 	s.stepY = dir.Y * s.step
-	log.Printf("111111-----stepX[%f]stepY[%f]", s.stepX, s.stepY)
+	//log.Printf("111111-----stepX[%f]stepY[%f]", s.stepX, s.stepY)
 	return
 }
 
+// Transparent 穿越边界
 func (s *Square) Transparent(w, h float64) {
 	x, y := s.x+s.stepX, s.y+s.stepY // 小球下一步位置坐标
 	if x <= 0 {
@@ -87,8 +88,20 @@ func (s *Square) Transparent(w, h float64) {
 		s.x = 0
 	} else if y <= 0 {
 		s.y = h - s.h
-	} else if y+s.h >= h { // 小球落地
+	} else if y+s.h >= h {
 		s.y = 0
 	}
 	s.Opts.GeoM.Translate(s.x, s.y)
+}
+
+func (s *Square) Eat(awards *[]*Square) bool {
+	for idx, award := range *awards {
+		if ((s.x + s.w) >= award.x) && (s.x <= (award.x + award.w)) && ((s.y + s.h) >= award.y) && (s.y <= (award.y + award.h)) {
+			log.Printf("eat award x[%f]y[%f]", award.x, award.y)
+			//
+			*awards = append((*awards)[:idx], (*awards)[idx+1:]...)
+			return true
+		}
+	}
+	return false
 }

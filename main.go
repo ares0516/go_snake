@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"github.com/ares0516/snake/pkg/component"
 	"github.com/ares0516/snake/pkg/define"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"image/color"
 	"math/rand"
 	"sync"
@@ -14,7 +16,7 @@ type GreedySnake struct {
 	screenWidth  int
 	screenHeight int
 
-	snake        *component.Square
+	snakeHead    *component.Square
 	snakeBodyLen int                 // 蛇的长度
 	snakeBody    []*component.Square // 蛇的身体
 
@@ -57,21 +59,25 @@ func (g *GreedySnake) Update() error {
 		}
 	}
 
+	if g.snakeHead.Eat(&g.awards) {
+		g.snakeBodyLen++
+	}
+
 	if g.IsRunning() {
-		g.snake.Transparent(float64(g.screenWidth), float64(g.screenHeight))
+		g.snakeHead.Transparent(float64(g.screenWidth), float64(g.screenHeight))
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
-		g.snake.SetDirection(define.LEFT)
+		g.snakeHead.SetDirection(define.LEFT)
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
-		g.snake.SetDirection(define.RIGHT)
+		g.snakeHead.SetDirection(define.RIGHT)
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {
-		g.snake.SetDirection(define.UP)
+		g.snakeHead.SetDirection(define.UP)
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyDown) {
-		g.snake.SetDirection(define.DOWN)
+		g.snakeHead.SetDirection(define.DOWN)
 	}
 
 	return nil
@@ -82,7 +88,7 @@ func (g *GreedySnake) Draw(screen *ebiten.Image) {
 	// 绘制黑色背景
 	screen.Fill(color.RGBA{0, 0, 0, 255})
 	// 绘制蛇的头
-	screen.DrawImage(g.snake.Image, g.snake.Opts)
+	screen.DrawImage(g.snakeHead.Image, g.snakeHead.Opts)
 	// 绘制蛇的身体
 	for _, body := range g.snakeBody {
 		screen.DrawImage(body.Image, body.Opts)
@@ -92,6 +98,9 @@ func (g *GreedySnake) Draw(screen *ebiten.Image) {
 	for _, award := range g.awards {
 		screen.DrawImage(award.Image, award.Opts)
 	}
+
+	// 绘制计分牌
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("Score: %d", g.snakeBodyLen))
 }
 
 func (g *GreedySnake) AwardGenerator() {
@@ -100,11 +109,13 @@ func (g *GreedySnake) AwardGenerator() {
 		if g.IsRunning() {
 			select {
 			case <-ticker.C:
-				if len(g.awards) > 5 {
-					g.awards = g.awards[1:5]
-				}
+				//log.Printf("award len: %d", len(g.awards))
+
 				if len(g.awards) < 5 {
 					g.awards = append(g.awards, component.NewSquare(define.Yellow, 5, 5, float64(rand.Intn(300)+10), float64(rand.Intn(200)+10), 0))
+				}
+				if len(g.awards) > 5 {
+					g.awards = g.awards[1:5]
 				}
 			default:
 				// do nothing
@@ -122,6 +133,23 @@ func (g *GreedySnake) BodyGenerator(dir define.Position) {
 	}
 }
 
+func (g *GreedySnake) GetLevel() int {
+	switch g.snakeBodyLen {
+	case 10:
+		return 1
+	case 20:
+		return 2
+	case 30:
+		return 3
+	case 40:
+		return 4
+	case 50:
+		return 5
+	default:
+		return 5
+	}
+}
+
 // XUpdate 更新游戏的逻辑,通过外部协程来更新snake的移动
 // TODO: 1.根据游戏等级来控制蛇的移动速度
 //
@@ -133,8 +161,10 @@ func XUpdate(game *GreedySnake) {
 		if game.IsRunning() {
 			select {
 			case <-ticker.C:
-				pos = game.snake.Move()
+				pos = game.snakeHead.Move()
 				game.BodyGenerator(pos)
+				td := time.Duration(600-game.GetLevel()*100) * time.Millisecond
+				ticker.Reset(td)
 			default:
 				// do nothing
 			}
@@ -145,7 +175,7 @@ func XUpdate(game *GreedySnake) {
 func main() {
 	// 1. 初始化游戏
 	game := NewGreedySnake()
-	game.snake = component.NewSquare(define.Green, 5, 5, 320, 240, 5)
+	game.snakeHead = component.NewSquare(define.Green, 5, 5, 320, 240, 5)
 	// 初始化蛇的身体，优先生成尾部
 	//game.snakeBody = append(game.snakeBody, component.NewSquare(define.Green, 5, 5, 305, 240, 5))
 	//game.snakeBody = append(game.snakeBody, component.NewSquare(define.Green, 5, 5, 310, 240, 5))
